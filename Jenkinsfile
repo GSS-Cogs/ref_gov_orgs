@@ -11,7 +11,7 @@ pipeline {
                 }
             }
             steps {
-                sh 'jupyter-nbconvert --to python --stdout org_to_turtle.ipynb | python'
+                sh 'jupyter-nbconvert --to python --stdout orgs_to_turtle.ipynb | python'
             }
         }
         stage('Publish results') {
