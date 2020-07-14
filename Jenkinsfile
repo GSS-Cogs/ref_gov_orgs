@@ -1,3 +1,7 @@
+@Library('pmd@family-pmd4') _
+
+import uk.org.floop.jenkins_pmd.Drafter
+
 pipeline {
     agent {
         label 'master'
@@ -17,22 +21,21 @@ pipeline {
         stage('Publish results') {
             steps {
                 script {
-                    configFileProvider([configFile(fileId: 'pmd', variable: 'configfile')]) {
-                        def config = readJSON(text: readFile(file: configfile))
-                        String PMD = config['pmd_api']
-                        String credentials = config['credentials']
-                        def drafts = drafter.listDraftsets(PMD, credentials, 'owned')
-                        def jobDraft = drafts.find { it['display-name'] == env.JOB_NAME }
-                        if (jobDraft) {
-                            drafter.deleteDraftset(PMD, credentials, jobDraft.id)
-                        }
-                        def newJobDraft = drafter.createDraftset(PMD, credentials, env.JOB_NAME)
-                        String graph = "http://gss-data.org.uk/graph/organizations"
-                        drafter.deleteGraph(PMD, credentials, newJobDraft.id, graph)
-                        drafter.addData(PMD, credentials, newJobDraft.id,
-                                        readFile(file: "gov_orgs.ttl", encoding: 'UTF-8'),
-                                        'text/turtle;charset=UTF-8', graph)
-                        drafter.publishDraftset(PMD, credentials, newJobDraft.id)
+                    def pmd = pmdConfig('pmd')
+                    for (myDraft in pmd.drafter
+                            .listDraftsets(Drafter.Include.OWNED)
+                            .findAll { it['display-name'] == env.JOB_NAME }) {
+                        pmd.drafter.deleteDraftset(myDraft.id)
+                    }
+                    def id = pmd.drafter.createDraftset(env.JOB_NAME).id
+                    for (graph in util.jobGraphs(pmd, id)) {
+                        pmd.drafter.deleteGraph(id, graph)
+                        echo "Removing own graph ${graph}"
+                    }
+                    String graph = "http://gss-data.org.uk/graph/organizations"
+                    echo "Adding gov orgs as ${graph}"
+                    pmd.drafter.addData(id, "${WORKSPACE}/gov_orgs.ttl", "text/turtle", "UTF-8", graph)
+                    pmd.drafter.publishDraftset(id)
                     }
                 }
             }
