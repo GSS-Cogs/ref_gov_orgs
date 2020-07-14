@@ -36,7 +36,6 @@ pipeline {
                     echo "Adding gov orgs as ${graph}"
                     pmd.drafter.addData(id, "${WORKSPACE}/gov_orgs.ttl", "text/turtle", "UTF-8", graph)
                     pmd.drafter.publishDraftset(id)
-                    }
                 }
             }
         }
